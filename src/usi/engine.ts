@@ -198,7 +198,6 @@ export class EngineProcess {
   }
 
   quit(): void {
-    this.log("quit USI engine");
     if (!this.handle) {
       return;
     }
@@ -394,6 +393,6 @@ export class EngineProcess {
 
   private log(message: string): void {
     const pid = this.handle ? this.handle.pid : "nan";
-    console.log(`USI: PATH=${this.path} PID=${pid}: ${message}`);
+    console.log(`USI:${this.name}:${pid}: ${message}`);
   }
 }

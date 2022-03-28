@@ -1,6 +1,5 @@
 import { AudioEventHandler } from "@/audio";
 import { AppSetting } from "@/settings/app";
-import { GameSetting } from "@/settings/game";
 import { ResearchSetting } from "@/settings/research";
 import { Record } from "@/shogi";
 import { BussyState } from "./bussy";
@@ -26,8 +25,7 @@ export type State = {
   bussyState: BussyState;
   usiSessionID: number;
   researchSetting: ResearchSetting;
-  gameSetting: GameSetting;
-  gameState: GameState;
+  game: GameState;
   beep5sHandler?: AudioEventHandler;
   usiMonitor: USIMonitor;
   appSetting: AppSetting;

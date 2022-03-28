@@ -1,13 +1,21 @@
-import { defaultGameSetting, GameSetting } from "@/settings/game";
-import { Color } from "@/shogi";
+import { stopUSI } from "@/ipc/renderer";
+import { defaultGameSetting, GameSetting, PlayerType } from "@/settings/game";
+import {
+  Color,
+  Position,
+  Record,
+  RecordMetadataKey,
+  reverseColor,
+} from "@/shogi";
 
 export type PlayerState = {
   timeMs: number;
   byoyomi: number;
 };
 
-type TimerHandlers = {
-  timeout: () => void;
+type GameHandlers = {
+  onClearRecord: () => void;
+  onTimeout: () => void;
   onBeepShort: () => void;
   onBeepUnlimited: () => void;
 };
@@ -19,7 +27,9 @@ export class GameState {
   private timerStart: Date;
   private lastTimeMs: number;
   private _elapsedMs: number;
-  private gameSetting: GameSetting;
+  private _setting: GameSetting;
+  private handlers?: GameHandlers;
+  private color: Color;
 
   constructor() {
     this.black = { timeMs: 0, byoyomi: 0 };
@@ -28,7 +38,8 @@ export class GameState {
     this.timerStart = new Date();
     this.lastTimeMs = 0;
     this._elapsedMs = 0;
-    this.gameSetting = defaultGameSetting();
+    this._setting = defaultGameSetting();
+    this.color = Color.BLACK;
   }
 
   get blackTimeMs(): number {
@@ -51,12 +62,61 @@ export class GameState {
     return this._elapsedMs;
   }
 
-  setup(gameSetting: GameSetting): void {
-    this.black.timeMs = gameSetting.timeLimit.timeSeconds * 1e3;
-    this.black.byoyomi = gameSetting.timeLimit.byoyomi;
-    this.white.timeMs = gameSetting.timeLimit.timeSeconds * 1e3;
-    this.white.byoyomi = gameSetting.timeLimit.byoyomi;
-    this.gameSetting = gameSetting;
+  get setting(): GameSetting {
+    return this._setting;
+  }
+
+  get isHumanTurn(): boolean {
+    switch (this.color) {
+      case Color.BLACK:
+        return this.setting.black.type === PlayerType.HUMAN;
+      case Color.WHITE:
+        return this.setting.white.type === PlayerType.HUMAN;
+    }
+    return false;
+  }
+
+  get shouldFlipBoardOnStart(): boolean | null {
+    if (!this.setting.humanIsFront) {
+      return null;
+    }
+    if (
+      this.setting.black.type === PlayerType.HUMAN &&
+      this.setting.white.type !== PlayerType.HUMAN
+    ) {
+      return false;
+    } else if (
+      this.setting.black.type !== PlayerType.HUMAN &&
+      this.setting.white.type === PlayerType.HUMAN
+    ) {
+      return true;
+    }
+    return null;
+  }
+
+  begin(setting: GameSetting, record: Record, handlers: GameHandlers): void {
+    this.black.timeMs = setting.timeLimit.timeSeconds * 1e3;
+    this.black.byoyomi = setting.timeLimit.byoyomi;
+    this.white.timeMs = setting.timeLimit.timeSeconds * 1e3;
+    this.white.byoyomi = setting.timeLimit.byoyomi;
+    this._setting = setting;
+    this.handlers = handlers;
+    this.color = record.position.color;
+    if (setting.startPosition) {
+      const position = new Position();
+      position.reset(setting.startPosition);
+      record.clear(position);
+      handlers.onClearRecord();
+    }
+    record.metadata.setStandardMetadata(
+      RecordMetadataKey.BLACK_NAME,
+      setting.black.name
+    );
+    record.metadata.setStandardMetadata(
+      RecordMetadataKey.WHITE_NAME,
+      setting.white.name
+    );
+    this.startTimer();
   }
 
   private getPlayerState(color: Color): PlayerState {
@@ -68,11 +128,18 @@ export class GameState {
     }
   }
 
-  startTimer(color: Color, handlers: TimerHandlers): void {
-    const playerState = this.getPlayerState(color);
+  nextTurn(): void {
+    this.getPlayerState(this.color).timeMs += this.setting.timeLimit.increment * 1e3;
+    this.color = reverseColor(this.color);
+    this.clearTimer();
+    this.startTimer();
+  }
+
+  private startTimer(): void {
+    const playerState = this.getPlayerState(this.color);
     this.timerStart = new Date();
     this.lastTimeMs = playerState.timeMs;
-    playerState.byoyomi = this.gameSetting.timeLimit.byoyomi;
+    playerState.byoyomi = this.setting.timeLimit.byoyomi;
     this.timerHandle = window.setInterval(() => {
       const lastTimeMs = playerState.timeMs;
       const lastByoyomi = playerState.byoyomi;
@@ -84,12 +151,12 @@ export class GameState {
       } else {
         playerState.timeMs = 0;
         playerState.byoyomi = Math.max(
-          Math.ceil(this.gameSetting.timeLimit.byoyomi + timeMs / 1e3),
+          Math.ceil(this.setting.timeLimit.byoyomi + timeMs / 1e3),
           0
         );
       }
       if (playerState.timeMs === 0 && playerState.byoyomi === 0) {
-        handlers.timeout();
+        this.timeout();
         return;
       }
       const lastTime = Math.ceil(lastTimeMs / 1e3);
@@ -97,30 +164,51 @@ export class GameState {
       const byoyomi = playerState.byoyomi;
       if (time === 0 && (lastTimeMs > 0 || byoyomi !== lastByoyomi)) {
         if (byoyomi <= 5) {
-          handlers.onBeepUnlimited();
+          this.beepUnlimited();
         } else if (byoyomi <= 10 || byoyomi % 10 === 0) {
-          handlers.onBeepShort();
+          this.beepShort();
         }
-      } else if (!this.gameSetting.timeLimit.byoyomi && time !== lastTime) {
+      } else if (!this.setting.timeLimit.byoyomi && time !== lastTime) {
         if (time <= 5) {
-          handlers.onBeepUnlimited();
+          this.beepUnlimited();
         } else if (time <= 10 || time === 20 || time === 30 || time === 60) {
-          handlers.onBeepShort();
+          this.beepShort();
         }
       }
     }, 100);
   }
 
-  increment(color: Color): void {
-    this.getPlayerState(color).timeMs +=
-      this.gameSetting.timeLimit.increment * 1e3;
+  end(): void {
+    this.clearTimer();
   }
 
-  clearTimer(): void {
+  private clearTimer(): void {
     if (this.timerHandle) {
       window.clearInterval(this.timerHandle);
       this.timerHandle = 0;
     }
     this._elapsedMs = 0;
+  }
+
+  private timeout() {
+    if (this.isHumanTurn || this.setting.enableEngineTimeout) {
+      if (this.handlers?.onTimeout) {
+        this.handlers.onTimeout();
+      }
+    } else {
+      stopUSI(this.color);
+    }
+  }
+
+  private beepUnlimited() {
+    if (this.handlers?.onBeepUnlimited) {
+      this.handlers.onBeepUnlimited();
+    }
+  }
+
+  private beepShort() {
+    if (this.handlers?.onBeepShort) {
+      this.handlers.onBeepShort();
+    }
   }
 }

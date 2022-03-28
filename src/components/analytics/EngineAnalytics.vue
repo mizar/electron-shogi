@@ -51,8 +51,8 @@ export default defineComponent({
         (infos.researcher ? 1 : 0);
       return n !== 0 ? props.size.height / n : 0;
     });
-    const blackPlayerName = computed(() => store.state.gameSetting.black.name);
-    const whitePlayerName = computed(() => store.state.gameSetting.white.name);
+    const blackPlayerName = computed(() => store.state.game.setting.black.name);
+    const whitePlayerName = computed(() => store.state.game.setting.white.name);
     const researcherName = computed(
       () => store.state.researchSetting.usi?.name
     );
