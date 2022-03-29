@@ -151,6 +151,19 @@ export async function getUSIEngineInfo(
   return JSON.parse(await getAPI().getUSIEngineInfo(path));
 }
 
+export async function launchUSIPlayer(usi: USIEngineSetting): Promise<string> {
+  // FIXME
+  throw new Error("not implemented");
+}
+
+export async function usiGo(uri: string, usi: string, timeMs: number, gameSetting: GameSetting): Promise<void> {
+  // FIXME
+}
+
+export async function quitUSIPlayer(uri: string): Promise<void> {
+  // FIXME
+}
+
 export async function startResearch(
   researchSetting: ResearchSetting,
   sessionID: number
@@ -162,6 +175,7 @@ export async function endResearch(): Promise<void> {
   await getAPI().endResearch();
 }
 
+// FIXME: deprecated
 export async function startGame(
   gameSetting: GameSetting,
   sessionID: number
@@ -169,6 +183,7 @@ export async function startGame(
   await getAPI().startGame(JSON.stringify(gameSetting), sessionID);
 }
 
+// FIXME: deprecated
 export async function endGame(
   usi: string,
   specialMove?: SpecialMove
@@ -176,6 +191,7 @@ export async function endGame(
   await getAPI().endGame(usi, specialMove);
 }
 
+// FIXME: deprecated
 export async function updateUSIPosition(
   usi: string,
   gameSetting: GameSetting,
@@ -190,6 +206,7 @@ export async function updateUSIPosition(
   );
 }
 
+// FIXME: deprecated
 export async function stopUSI(color: Color): Promise<void> {
   await getAPI().stopUSI(color);
 }

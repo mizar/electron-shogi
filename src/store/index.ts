@@ -494,6 +494,9 @@ export const store = createStore<State>({
         state.usiSessionID += 1;
         await startGame(gameSetting, state.usiSessionID);
         state.game.begin(gameSetting, state.record, {
+          onMove: (move) => {
+            // FIXME
+          },
           onClearRecord: () => {
             state.recordFilePath = undefined;
           },

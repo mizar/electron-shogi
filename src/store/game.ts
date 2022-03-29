@@ -1,11 +1,14 @@
 import { stopUSI } from "@/ipc/renderer";
+import { buildPlayer, Player } from "@/players";
 import { defaultGameSetting, GameSetting, PlayerType } from "@/settings/game";
 import {
   Color,
+  Move,
   Position,
   Record,
   RecordMetadataKey,
   reverseColor,
+  SpecialMove,
 } from "@/shogi";
 
 export type PlayerState = {
@@ -14,6 +17,7 @@ export type PlayerState = {
 };
 
 type GameHandlers = {
+  onMove: (move: Move | SpecialMove) => void;
   onClearRecord: () => void;
   onTimeout: () => void;
   onBeepShort: () => void;
@@ -21,8 +25,10 @@ type GameHandlers = {
 };
 
 export class GameState {
-  private black: PlayerState;
-  private white: PlayerState;
+  private blackPlayer: Player | null;
+  private whitePlayer: Player | null;
+  private blackState: PlayerState;
+  private whiteState: PlayerState;
   private timerHandle: number;
   private timerStart: Date;
   private lastTimeMs: number;
@@ -32,8 +38,10 @@ export class GameState {
   private color: Color;
 
   constructor() {
-    this.black = { timeMs: 0, byoyomi: 0 };
-    this.white = { timeMs: 0, byoyomi: 0 };
+    this.blackPlayer = null;
+    this.whitePlayer = null;
+    this.blackState = { timeMs: 0, byoyomi: 0 };
+    this.whiteState = { timeMs: 0, byoyomi: 0 };
     this.timerHandle = 0;
     this.timerStart = new Date();
     this.lastTimeMs = 0;
@@ -43,19 +51,19 @@ export class GameState {
   }
 
   get blackTimeMs(): number {
-    return this.black.timeMs;
+    return this.blackState.timeMs;
   }
 
   get blackByoyomi(): number {
-    return this.black.byoyomi;
+    return this.blackState.byoyomi;
   }
 
   get whiteTimeMs(): number {
-    return this.white.timeMs;
+    return this.whiteState.timeMs;
   }
 
   get whiteByoyomi(): number {
-    return this.white.byoyomi;
+    return this.whiteState.byoyomi;
   }
 
   get elapsedMs(): number {
@@ -73,7 +81,6 @@ export class GameState {
       case Color.WHITE:
         return this.setting.white.type === PlayerType.HUMAN;
     }
-    return false;
   }
 
   get shouldFlipBoardOnStart(): boolean | null {
@@ -95,10 +102,12 @@ export class GameState {
   }
 
   begin(setting: GameSetting, record: Record, handlers: GameHandlers): void {
-    this.black.timeMs = setting.timeLimit.timeSeconds * 1e3;
-    this.black.byoyomi = setting.timeLimit.byoyomi;
-    this.white.timeMs = setting.timeLimit.timeSeconds * 1e3;
-    this.white.byoyomi = setting.timeLimit.byoyomi;
+    this.blackPlayer = buildPlayer(setting.black, handlers);
+    this.whitePlayer = buildPlayer(setting.white, handlers);
+    this.blackState.timeMs = setting.timeLimit.timeSeconds * 1e3;
+    this.blackState.byoyomi = setting.timeLimit.byoyomi;
+    this.whiteState.timeMs = setting.timeLimit.timeSeconds * 1e3;
+    this.whiteState.byoyomi = setting.timeLimit.byoyomi;
     this._setting = setting;
     this.handlers = handlers;
     this.color = record.position.color;
@@ -122,9 +131,9 @@ export class GameState {
   private getPlayerState(color: Color): PlayerState {
     switch (color) {
       case Color.BLACK:
-        return this.black;
+        return this.blackState;
       case Color.WHITE:
-        return this.white;
+        return this.whiteState;
     }
   }
 
