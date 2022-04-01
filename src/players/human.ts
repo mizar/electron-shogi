@@ -1,4 +1,4 @@
-import { Player, PlayerHandler } from "@/players";
+import { Player } from "@/players";
 
 class HumanPlayer {
   constructor() {
@@ -11,8 +11,8 @@ class HumanPlayer {
   stop(): void {}
 
   close(): void {}
-}
+};
 
-export function buildHumanPlayer(_: PlayerHandler): Player {
+export function buildHumanPlayer(): Player {
   return new HumanPlayer();
 }

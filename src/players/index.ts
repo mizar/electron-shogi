@@ -17,7 +17,7 @@ export type PlayerHandler = {
 export function buildPlayer(setting: PlayerSetting, handler: PlayerHandler): Player {
   switch (setting.type) {
     case PlayerType.HUMAN:
-      return buildHumanPlayer(handler);
+      return buildHumanPlayer();
     case PlayerType.USI:
       return buildUSIPlayer(handler);
   }

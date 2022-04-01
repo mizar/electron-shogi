@@ -1,5 +1,5 @@
-import { stopUSI } from "@/ipc/renderer";
 import { buildPlayer, Player } from "@/players";
+import { buildHumanPlayer } from "@/players/human";
 import { defaultGameSetting, GameSetting, PlayerType } from "@/settings/game";
 import {
   Color,
@@ -25,8 +25,8 @@ type GameHandlers = {
 };
 
 export class GameState {
-  private blackPlayer: Player | null;
-  private whitePlayer: Player | null;
+  private blackPlayer: Player;
+  private whitePlayer: Player;
   private blackState: PlayerState;
   private whiteState: PlayerState;
   private timerHandle: number;
@@ -38,8 +38,8 @@ export class GameState {
   private color: Color;
 
   constructor() {
-    this.blackPlayer = null;
-    this.whitePlayer = null;
+    this.blackPlayer = buildHumanPlayer();
+    this.whitePlayer = buildHumanPlayer();
     this.blackState = { timeMs: 0, byoyomi: 0 };
     this.whiteState = { timeMs: 0, byoyomi: 0 };
     this.timerHandle = 0;
@@ -128,6 +128,15 @@ export class GameState {
     this.startTimer();
   }
 
+  private getPlayer(color: Color): Player {
+    switch (color) {
+      case Color.BLACK:
+        return this.blackPlayer;
+      case Color.WHITE:
+        return this.whitePlayer;
+    }
+  }
+
   private getPlayerState(color: Color): PlayerState {
     switch (color) {
       case Color.BLACK:
@@ -205,7 +214,7 @@ export class GameState {
         this.handlers.onTimeout();
       }
     } else {
-      stopUSI(this.color);
+      this.getPlayer(this.color).stop();
     }
   }
 

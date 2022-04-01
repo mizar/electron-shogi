@@ -33,15 +33,6 @@ export interface API {
   getUSIEngineInfo(path: string): Promise<string>;
   startResearch(json: string, sessionID: number): Promise<void>;
   endResearch(): Promise<void>;
-  startGame(json: string, sessionID: number): Promise<void>;
-  endGame(usi: string, specialMove?: SpecialMove): Promise<void>;
-  updateUSIPosition(
-    usi: string,
-    gameSetting: string,
-    blackTimeMs: number,
-    whiteTimeMs: number
-  ): Promise<void>;
-  stopUSI(color: Color): Promise<void>;
   sendUSISetOption(path: string, name: string): Promise<void>;
   onSendError(callback: (e: Error) => void): void;
   onMenuEvent(callback: (event: MenuEvent) => void): void;
@@ -164,6 +155,7 @@ export async function quitUSIPlayer(uri: string): Promise<void> {
   // FIXME
 }
 
+// FIXME: rename to launchUSIResearcher
 export async function startResearch(
   researchSetting: ResearchSetting,
   sessionID: number
@@ -173,42 +165,6 @@ export async function startResearch(
 
 export async function endResearch(): Promise<void> {
   await getAPI().endResearch();
-}
-
-// FIXME: deprecated
-export async function startGame(
-  gameSetting: GameSetting,
-  sessionID: number
-): Promise<void> {
-  await getAPI().startGame(JSON.stringify(gameSetting), sessionID);
-}
-
-// FIXME: deprecated
-export async function endGame(
-  usi: string,
-  specialMove?: SpecialMove
-): Promise<void> {
-  await getAPI().endGame(usi, specialMove);
-}
-
-// FIXME: deprecated
-export async function updateUSIPosition(
-  usi: string,
-  gameSetting: GameSetting,
-  blackTimeMs: number,
-  whiteTimeMs: number
-): Promise<void> {
-  await getAPI().updateUSIPosition(
-    usi,
-    JSON.stringify(gameSetting),
-    blackTimeMs,
-    whiteTimeMs
-  );
-}
-
-// FIXME: deprecated
-export async function stopUSI(color: Color): Promise<void> {
-  await getAPI().stopUSI(color);
 }
 
 export async function sendUSISetOption(
