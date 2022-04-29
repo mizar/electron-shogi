@@ -7,7 +7,7 @@ type Evaluation = {
   researcher?: number;
 };
 
-export const MAX_SCORE = 2000;
+export const MAX_SCORE = 1000000;
 
 export const MIN_SCORE = -MAX_SCORE;
 
